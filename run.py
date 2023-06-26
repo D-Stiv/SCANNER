@@ -579,12 +579,12 @@ def metric(pred, real):
     return mae, mape, rmse
 
 
-def get_propagation_matrices(dataset_name=pems_bay):
+def get_correlation_matrix(dataset_name=pems_bay):
     sensor_dir = f"{get_root()}sensor_graph/{dataset_name}"
-    if dataset_name in [pems_bay, metr_la] and args.use_adj_neighbors:
+    if dataset_name in [pems_bay, metr_la]:
         adj_path = f"{sensor_dir}/adj_mx.pkl"
         with open(adj_path, "rb") as f:
-            a, b, adj = pickle.load(f)
+            _, _, adj = pickle.load(f)
         num_nodes = adj.shape[0]
         num_horizons = 12
         trans_matrices = np.tile(adj, (num_horizons,1)).reshape(num_horizons, num_nodes, num_nodes)
@@ -599,7 +599,7 @@ def load_dataset(dataset_name='pems-bay', input_horizon=12, output_horizon=12, t
     data_ = {}
     root = get_root()
     dir_path = f'{root}{output_dir_}/{dataset_name.lower()}/split_{train_fraction}_{test_fraction}_hor_{input_horizon}_{output_horizon}'
-    if os.path.exists(dir_path) and not args.new_data:
+    if os.path.exists(dir_path):
         for category in ['train', 'val', 'test']:
             cat_data = np.load(os.path.join(dir_path, category + '.npz'))
             data_['x_' + category] = cat_data['x']
@@ -670,20 +670,20 @@ def load_dataset(dataset_name='pems-bay', input_horizon=12, output_horizon=12, t
     if args.use_neighbors and args.num_neighbors > 0:
         num_samples, _, num_nodes, in_feats = x.shape
         args.input_horizon = args.input_horizon + args.num_neighbors*args.neighbors_horizons
-        A = get_propagation_matrices(dataset_name)[:, :num_nodes, :num_nodes]
+        A = get_correlation_matrix(dataset_name)[:, :num_nodes, :num_nodes]
    
         x_neighbors = []
 
         for h in range(min(args.neighbors_horizons, A.shape[0])):
-                np.fill_diagonal(A[h], 0.)
-                x_neighbors_h = []
-                for j in range(num_nodes):
-                    topK_j = np.flip(np.argsort(A[h, j]))[:args.num_neighbors]
-                    x_neighbors_h_j = x[:, h, topK_j]
-                    x_neighbors_h.append(x_neighbors_h_j)
-                x_neighbors_h = np.stack(x_neighbors_h, axis=-2)
+            np.fill_diagonal(A[h], 0.)
+            x_neighbors_h = []
+            for j in range(num_nodes):
+                topK_j = np.flip(np.argsort(A[h, j]))[:args.num_neighbors]
+                x_neighbors_h_j = x[:, h, topK_j]
+                x_neighbors_h.append(x_neighbors_h_j)
+            x_neighbors_h = np.stack(x_neighbors_h, axis=-2)
                     
-                x_neighbors.append(x_neighbors_h)
+            x_neighbors.append(x_neighbors_h)
 
         x_neighbors = np.stack(x_neighbors, axis=1)
         x_neighbors = x_neighbors.reshape(num_samples, args.num_neighbors*args.neighbors_horizons, num_nodes, in_feats)
@@ -707,15 +707,14 @@ def load_dataset(dataset_name='pems-bay', input_horizon=12, output_horizon=12, t
     for cat in ["train", "val", "test"]:
         _x, _y = locals()["x_" + cat], locals()["y_" + cat]
         print(cat, "x: ", _x.shape, "y:", _y.shape)
-        if args.save_new_data:
-            np.savez_compressed(
-                os.path.join(dir_path, f"{cat}.npz"),
-                x=_x,
-                y=_y,
-                x_offsets=x_offsets.reshape(list(x_offsets.shape) + [1]),
-                y_offsets=y_offsets.reshape(list(y_offsets.shape) + [1]),
-            )
-            print(f'saved {cat} data at: {dir_path}/{cat}.npz')
+        np.savez_compressed(
+            os.path.join(dir_path, f"{cat}.npz"),
+            x=_x,
+            y=_y,
+            x_offsets=x_offsets.reshape(list(x_offsets.shape) + [1]),
+            y_offsets=y_offsets.reshape(list(y_offsets.shape) + [1]),
+        )
+        print(f'saved {cat} data at: {dir_path}/{cat}.npz')
         data_['x_' + cat], data_['y_' + cat] = _x, _y
     scaler = StandardScaler(mean=data_['x_train'][..., 0].mean(), std=data_['x_train'][..., 0].std())
     
