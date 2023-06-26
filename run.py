@@ -35,7 +35,7 @@ def set_seed(seed=42, loader=None):
     
     
 def get_root():
-    root = 'my_model/'
+    root = 'SCANNER/'
     while not os.path.exists(f"{root}"):
         root = f'../{root}'
     return root

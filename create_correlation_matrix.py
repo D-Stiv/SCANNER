@@ -12,7 +12,7 @@ metr_la = 'metr-la'
 pems_bay = "pems-bay"
 
 def get_root():
-    root = 'my_model/'
+    root = 'SCANNER/'
     while not os.path.exists(f"{root}"):
         root = f'../{root}'
     return root
