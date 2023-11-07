@@ -20,7 +20,6 @@ If you find the paper useful, please cite as following:
   title     = {SCANNER: A Spatio-temporal Correlation and Neighborhood-based Feature Enrichment for Traffic Prediction},
   year      = {2023},
   doi       = {10.1145/3589132.3625653},
-  groups    = {Traffic forecasting},
   isbn      = {979-8-4007-0168-9/23/11},
 }
 ````
